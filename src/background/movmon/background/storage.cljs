@@ -10,7 +10,6 @@
   (-> (storage/get-local)
       (set (clj->js {:monitors {name {:url url
                                       :data data}}}))))
-
 (defn get-all-monitors
   []
   (let [local-storage (storage/get-local)]
@@ -26,5 +25,6 @@
   (go
     (-> (<! (get-all-monitors))
         name)))
+
 
 
