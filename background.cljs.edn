@@ -3,7 +3,7 @@
  :output-dir    "resources/unpacked/compiled/background"
  :asset-path    "compiled/background"
  :preloads      [devtools.preload figwheel.core figwheel.main figwheel.repl.preload]
- :main          chromex-sample.background
+ :main          movmon.background
  :optimizations :none
  :source-map    true}
 

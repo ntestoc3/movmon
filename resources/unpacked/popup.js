@@ -3,4 +3,4 @@ goog.require("figwheel.core");
 goog.require("figwheel.main");
 goog.require("figwheel.repl.preload");
 goog.require("process.env");
-goog.require("chromex_sample.popup");
+goog.require("movmon.popup");

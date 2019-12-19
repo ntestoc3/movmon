@@ -1,4 +1,4 @@
-(ns chromex-sample.popup.core
+(ns movmon.popup.core
   (:require-macros [cljs.core.async.macros :refer [go-loop]])
   (:require [cljs.core.async :refer [<!]]
             [chromex.logging :refer-macros [log info warn error group group-end]]

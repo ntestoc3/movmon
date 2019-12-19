@@ -3,7 +3,7 @@
  :output-dir    "resources/unpacked/compiled/popup"
  :asset-path    "compiled/popup"
  :preloads      [devtools.preload figwheel.core figwheel.main figwheel.repl.preload]
- :main          chromex-sample.popup
+ :main          movmon.popup
  :optimizations :none
  :source-map    true}
 
