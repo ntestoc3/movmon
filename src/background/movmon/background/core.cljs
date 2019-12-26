@@ -110,12 +110,7 @@
 ;;;;;; ======== 连接消息事件操作
 (def clients (atom []))
 
-(def popup-clients (atom []))
 ; -- clients manipulation ---------------------------------------------------------------------------------------------------
-
-(defn add-popup! [client]
-  (log "new popup conn")
-  (swap! popup-clients conj client))
 
 (defn add-client! [client]
   (log "BACKGROUND: client connected" (get-sender client))
@@ -124,7 +119,6 @@
 (defn remove-client! [client]
   (log "BACKGROUND: client disconnected" (get-sender client))
   (let [remove-item (fn [coll item] (remove #(identical? item %) coll))]
-    (swap! popup-clients remove-item client)
     (swap! clients remove-item client)))
 
 
@@ -140,8 +134,7 @@
       (if-some [msg-type (:type message)]
         (case msg-type
           "add-monitor" (add-monitor! (:url message))
-          "conn" (when (= (:from message) "popup")
-                  (add-popup! (get-sender client)))
+          "conn" (log "BACKGROUND: new conn " (:from message))
           (log "BACKGROUND: unsupport message type" (str msg-type) "from" (get-sender client))
           )
         (log "BACKGROUND: got client message:" message "from" (get-sender client)))
@@ -161,6 +154,10 @@
     (post-message! client "a new tab was created")))
 
 (defn handle-storage-changed! [changes area]
+  (doseq [client @clients]
+    (post-message! client #js {:type "storage-changed"
+                               :area area
+                               :changes changes}))
   (log "storage " area "changed" changes)
   )
 

@@ -6,6 +6,7 @@
                  [binaryage/devtools "0.9.10"]
                  [prismatic/dommy "1.1.0"]
                  [cljs-ajax "0.8.0"]
+                 [binaryage/oops "0.7.0"]
                  [reagent "0.9.0-rc4"]
                  [com.bhauman/figwheel-main "0.2.3"]
                  [com.bhauman/rebel-readline-cljs "0.1.4"]
