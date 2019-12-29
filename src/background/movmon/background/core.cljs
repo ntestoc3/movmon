@@ -17,6 +17,15 @@
             [movmon.background.storage :as db]))
 
 ;;;; ================ 主要功能代码
+
+(defn noti-box
+  [title message]
+  (noti/create "movi-monitor" #js {:type "basic"
+                                   :title title
+                                   :message message
+                                   :iconUrl "images/icon48.png"
+                                   }))
+
 (defn parse-html
   "Parse an html string into a document"
   [html]
@@ -46,30 +55,48 @@
 (defn error-handler [{:keys [status status-text]}]
   (log "error on ajax request" status status-text))
 
+(defn update-badge!
+  []
+  (go
+    (let [count (<! (db/get-new-count))]
+      (set-badge-text (clj->js {:text (if (pos? count)
+                                        (str count)
+                                        "")}))
+      (set-badge-background-color #js {:color "#ff0000"}))))
+
 (defn check-update-data!
-  [name url last-data body]
+  [name info body]
   (let [html-body (parse-html body)
         dl-spans (sel html-body "span.dlname.nm")
+        last-data (first (:data info))
         datas (map parse-dlink dl-spans)]
     (if (= (:name (first datas))
            (:name last-data))
       (log "check update:" name "no new data!")
-      (let [new-datas (-> (partition-by #(= last-data %) datas)
-                          first)]
-        (log  name "check update new datas save:" new-datas "\n"
-              "last:" last-data "\n"
-              "first:" (first datas))
-        (db/save-monitor-info! name url new-datas)
+      (let [update-datas (-> (partition-by #(= last-data %) datas)
+                             first)
+            new-datas (if (:new info)
+                        ;; 之前的数据也是更新数据,则合并
+                        (concat update-datas (:data info))
+                        update-datas)
+            update-count (count update-datas)]
+        (log name "check update new datas save:" new-datas "\n")
+        (go
+          (noti-box "剧集更新！" (str name "更新" update-count "集！"))
+          (let [new-count (+ (<! (db/get-new-count))
+                             update-count)]
+            (db/set-new-count! new-count)
+            (set-badge-text (clj->js {:text (str new-count)}))
+            (set-badge-background-color #js {:color "#ff0000"})))
+        (db/save-monitor-info! name (:url info) new-datas true)
         ))))
 
 (defn proc-monitor
   [[name info]]
-  (let [url (:url info)
-        last-data (-> (:data info)
-                      first)]
+  (let [url (:url info)]
     (log "proc monitor :" name "url:" url)
     (GET url
-        {:handler (partial check-update-data! name url last-data)
+        {:handler (partial check-update-data! name info)
          :error-handler error-handler})))
 
 (defn proc-monitors
@@ -88,17 +115,9 @@
         dl-spans (sel html-body "span.dlname.nm")
         datas (take 3 (map parse-dlink dl-spans))]
     (log title "datas save:" datas)
-    (go (noti/create "movi-monitor" #js {:type "basic"
-                                         :title "新监控"
-                                         :message (str title "添加成功")
-                                         :iconUrl "images/icon48.png"
-                                         })
-        (set-badge-text #js {:text (str (count datas))})
-        (set-badge-background-color #js {:color "#ff0000"})
-
-        )
-    (db/save-monitor-info! title url datas)
-    ))
+    (go
+      (noti-box "新监控" (str title "添加成功")))
+    (db/save-monitor-info! title url datas false)))
 
 (defn add-monitor!
   [url]
@@ -190,6 +209,6 @@
 
 (defn init! []
   (log "BACKGROUND: start ")
-  (js/setInterval proc-monitors 10000)
-  ;;(add-monitor! "http://www.8080s.net/ju/32496")
+  (js/setInterval proc-monitors (* 5 60 1000))
+  (update-badge!)
   (boot-chrome-event-loop!))

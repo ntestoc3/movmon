@@ -2,6 +2,7 @@
   (:require-macros [cljs.core.async.macros :refer [go go-loop]])
   (:require [cljs.core.async :refer [<!]]
             [reagent.core :as r]
+            [clojure.string :as string]
             [movmon.background.storage :as db]
             [dommy.core :as dommy :refer-macros [sel sel1]]
             [chromex.logging :refer-macros [log info warn error group group-end]]
@@ -12,6 +13,11 @@
 
 (def monitors (r/atom {}))
 
+(defn update-monitors!
+  []
+  (go
+    (reset! monitors (<! (db/get-all-monitors)))))
+
 ; -- a message loop -----------
 (defn process-message! [message]
   (log "POPUP: got message:" message)
@@ -20,7 +26,7 @@
       "storage-changed"
       (when (identical? "local" (:area message))
         (log "storage changed" (get-in message [:changes]))
-        (reset! monitors (get-in message [:changes :newValue :monitors])))
+        (reset! monitors (get-in message [:changes :monitors :newValue])))
       (log "POPUP: unproced message:" msg-type))))
 
 (defn run-message-loop! [message-channel]
@@ -48,6 +54,19 @@
   (post-message! @server #js {:type "add-monitor"
                               :url url}))
 
+(defn del-monitor!
+  [title]
+  (log "del monitor" title)
+  (db/remove-monitor! title)
+  (update-monitors!))
+
+(defn mark-monitor-old!
+  [name data]
+  (go
+    (db/set-monitor-new-state! name false)
+    (let [new-count (db/get-new-count)]
+      (db/set-new-count! (- new-count (count data))))))
+
 (defn atom-input [value]
   [:input {:type "text"
            :value @value
@@ -72,17 +91,66 @@
                                 (:name info)]])
                 data)])
 
+(defn copy-text [text]
+  (let [el (js/document.createElement "textarea")
+        prev-focus-el js/document.activeElement
+        y-pos (or (.. js/window -pageYOffset)
+                  (.. js/document -documentElement -scrollTop))]
+    (set! (.-style el) #js {:position "absolute"
+                            :left "-9999px"
+                            :top (str y-pos "px")
+                            ;; iOS workaround?
+                            :fontSize "12pt"
+                            ;; reset box-model
+                            :border "0"
+                            :padding "0"
+                            :margin "0"})
+    (set! (.-value el) text)
+    (.addEventListener el "focus" (fn [_] (.scrollTo js/window 0 y-pos)))
+    (js/document.body.appendChild el)
+    (.setSelectionRange el 0 (.. el -value -length))
+    (.focus el)
+    (js/document.execCommand "copy")
+    (.blur el)
+    (when prev-focus-el
+      (.focus prev-focus-el))
+    (.removeAllRanges (.getSelection js/window))
+    (js/window.document.body.removeChild el)))
+
+(defn copy-urls
+  [data]
+  (->> (map :url data)
+       (string/join "\n")
+       copy-text))
+
 (defn curr-monitors-pane
   []
   (let [monitors-data @monitors]
     (log "curr monitors:" monitors-data "type:" (type monitors-data))
     (if (empty? monitors-data)
       [:div "没有监控"]
-      [:div [:ul (map (fn [[title info]]
+      [:div [:ul (map (fn [[title {:keys [data new url]}]]
                         ^{:key title}
-                        [:li
-                         (name title)
-                         [monitor-video (:data info)]])
+                        [:li.mov
+                         {:class (if new "mov-new")}
+                         [:div.mov-info
+                          [:div.mov-title (name title)]
+                          [:div.mov-op
+                           [:input.del
+                            {:type "button"
+                             :value "删除监控"
+                             :on-click (fn [_]
+                                         (del-monitor! title)
+                                         (if new
+                                           (mark-monitor-old! title data)))}]
+                           [:input.copy
+                            {:type "button"
+                             :value "复制链接"
+                             :on-click (fn [_]
+                                         (copy-urls data)
+                                         (if new
+                                           (mark-monitor-old! title data)))}]]]
+                         [monitor-video data]])
                       monitors-data)]])))
 
 (defn app
@@ -94,8 +162,7 @@
 (defn init! []
   (log "POPUP: start init")
   (connect-to-background-page!)
-  (go (reset! monitors (<! (db/get-all-monitors))))
+  (update-monitors!)
   (r/render [app]
             (sel1 js/document "#app")))
-
 

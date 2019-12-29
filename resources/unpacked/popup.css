@@ -1,0 +1,29 @@
+
+body {
+    width:380px;
+}
+
+input {
+    margin-left:10px;
+}
+
+div.mov-info div{
+    height:30px;
+    line-height:30px;
+}
+
+.mov-new {
+    font-weight:bold;
+}
+
+div.mov-title{
+    display:inline-flex;
+}
+
+div.mov-op {
+    float:right;
+}
+
+li.mov {
+    margin-top:15px;
+}
