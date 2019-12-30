@@ -73,11 +73,18 @@
            :value @value
            :on-change #(reset! value (-> % .-target .-value))}])
 
+(def ju-url "http://www.8080s.net/ju/list")
+
 (defn add-monitor-pane
   []
-  (let [url (r/atom "http://")]
+  (let [url (r/atom "")]
     (fn []
-      [:p "追剧页面: " [atom-input url] [:input {:type "button" :value "添加监控"
+      [:p
+       [:a {:href ju-url
+            :target "_blank"} "追剧"]
+       "地址: "
+       [atom-input url]
+       [:input {:type "button" :value "添加监控"
                                                  :on-click #(add-monitor! @url)}]]
       )))
 
@@ -88,7 +95,8 @@
    (map-indexed (fn [idx info]
                   (log "monitor video" idx info)
                   ^{:key idx} [:li
-                               [:a {:href (:url info)}
+                               [:a {:href (:url info)
+                                    :target "_blank"}
                                 (:name info)]])
                 data)])
 
@@ -129,7 +137,9 @@
   (let [monitors-data @monitors]
     (log "curr monitors:" monitors-data "type:" (type monitors-data))
     (if (empty? monitors-data)
-      [:div "没有监控"]
+      [:div
+       [:a {:href ju-url
+            :target "_blank"} "快去追剧"]]
       [:div [:ul (map (fn [[title {:keys [data new url]}]]
                         ^{:key title}
                         [:li.mov
@@ -137,6 +147,8 @@
                          [:div.mov-info
                           [:div.mov-title (name title)]
                           [:div.mov-op
+                           [:a {:href url
+                                :target "_blank"} "主页"]
                            [:input.del
                             {:type "button"
                              :value "删除监控"

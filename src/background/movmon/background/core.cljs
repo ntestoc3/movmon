@@ -82,7 +82,8 @@
     (let [new-count (<! (db/get-new-count))
           curr-count (if new-state
                        (+ new-count new-data-count)
-                       (- new-count new-data-count))]
+                       (max 0
+                            (- new-count new-data-count)))]
       (log "current count:" curr-count)
       (set-new-count! curr-count))))
 
@@ -105,8 +106,8 @@
         (log name "check update new datas save:" new-datas "\n")
         (go
           (noti-box "剧集更新！" (str name "更新" update-count "集！"))
+          (<! (db/save-monitor-info! name (:url info) new-datas true))
           (mark-monitor-new-state! name true update-count))
-        (db/save-monitor-info! name (:url info) new-datas true)
         ))))
 
 (defn proc-monitor
