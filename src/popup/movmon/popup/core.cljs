@@ -61,11 +61,12 @@
   (update-monitors!))
 
 (defn mark-monitor-old!
-  [name data]
-  (go
-    (db/set-monitor-new-state! name false)
-    (let [new-count (db/get-new-count)]
-      (db/set-new-count! (- new-count (count data))))))
+  [title data-count]
+  ;; 注意发送消息必须转换成js格式，不能发送keyword，要转换成str。
+  (post-message! @server #js {:type "mark-monitor-old"
+                              :name (name title)
+                              :data-count data-count
+                              }))
 
 (defn atom-input [value]
   [:input {:type "text"
@@ -142,14 +143,14 @@
                              :on-click (fn [_]
                                          (del-monitor! title)
                                          (if new
-                                           (mark-monitor-old! title data)))}]
+                                           (mark-monitor-old! title (count data))))}]
                            [:input.copy
                             {:type "button"
                              :value "复制链接"
                              :on-click (fn [_]
                                          (copy-urls data)
                                          (if new
-                                           (mark-monitor-old! title data)))}]]]
+                                           (mark-monitor-old! title (count data))))}]]]
                          [monitor-video data]])
                       monitors-data)]])))
 

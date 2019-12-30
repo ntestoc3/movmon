@@ -55,14 +55,36 @@
 (defn error-handler [{:keys [status status-text]}]
   (log "error on ajax request" status status-text))
 
+(defn set-badge-count!
+  [n]
+  (set-badge-text (clj->js {:text (if (pos? n)
+                                    (str n)
+                                    "")}))
+  (set-badge-background-color #js {:color "#ff0000"}))
+
+(defn set-new-count!
+  [n]
+  (doto n
+    db/set-new-count!
+    set-badge-count!))
+
 (defn update-badge!
   []
   (go
-    (let [count (<! (db/get-new-count))]
-      (set-badge-text (clj->js {:text (if (pos? count)
-                                        (str count)
-                                        "")}))
-      (set-badge-background-color #js {:color "#ff0000"}))))
+    (-> (<! (db/get-new-count))
+        set-badge-count!)))
+
+(defn mark-monitor-new-state!
+  "更新監控new狀態"
+  [title new-state new-data-count]
+  (go
+    (db/set-monitor-new-state! (keyword title) new-state)
+    (let [new-count (<! (db/get-new-count))
+          curr-count (if new-state
+                       (+ new-count new-data-count)
+                       (- new-count new-data-count))]
+      (log "current count:" curr-count)
+      (set-new-count! curr-count))))
 
 (defn check-update-data!
   [name info body]
@@ -83,11 +105,7 @@
         (log name "check update new datas save:" new-datas "\n")
         (go
           (noti-box "剧集更新！" (str name "更新" update-count "集！"))
-          (let [new-count (+ (<! (db/get-new-count))
-                             update-count)]
-            (db/set-new-count! new-count)
-            (set-badge-text (clj->js {:text (str new-count)}))
-            (set-badge-background-color #js {:color "#ff0000"})))
+          (mark-monitor-new-state! name true update-count))
         (db/save-monitor-info! name (:url info) new-datas true)
         ))))
 
@@ -154,6 +172,9 @@
         (case msg-type
           "add-monitor" (add-monitor! (:url message))
           "conn" (log "BACKGROUND: new conn " (:from message))
+          "mark-monitor-old" (mark-monitor-new-state! (:name message)
+                                                      false
+                                                      (:data-count message))
           (log "BACKGROUND: unsupport message type" (str msg-type) "from" (get-sender client))
           )
         (log "BACKGROUND: got client message:" message "from" (get-sender client)))
@@ -210,5 +231,6 @@
 (defn init! []
   (log "BACKGROUND: start ")
   (js/setInterval proc-monitors (* 5 60 1000))
+  (proc-monitors)
   (update-badge!)
   (boot-chrome-event-loop!))

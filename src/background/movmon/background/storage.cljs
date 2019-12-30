@@ -33,10 +33,10 @@
   (get-storage-key "new-count"))
 
 (defn get-monitor-info
-  [name]
+  [title]
   (go
     (-> (<! (get-all-monitors))
-        name)))
+        title)))
 
 (defn set-new-count!
   [n]
@@ -46,18 +46,19 @@
   [update-fn]
   (go
     (let [new-monitors (update-fn (<! (get-all-monitors)))]
+      (log "DB: update monitors!" new-monitors)
       (sa/set (storage/get-local) (clj->js {:monitors new-monitors})))))
 
 (defn save-monitor-info!
-  [name url data new]
-  (update-monitors! #(merge % {name {:url url
+  [title url data new]
+  (update-monitors! #(merge % {title {:url url
                                      :new new
                                      :data data}})))
 
 (defn remove-monitor!
-  [name]
-  (update-monitors! #(dissoc % name)))
+  [title]
+  (update-monitors! #(dissoc % title)))
 
 (defn set-monitor-new-state!
-  [name new]
-  (update-monitors! #(assoc-in % [name :new] new)))
+  [title new]
+  (update-monitors! #(assoc-in % [title :new] new)))
