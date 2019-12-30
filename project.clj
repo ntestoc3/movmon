@@ -8,8 +8,8 @@
                  [cljs-ajax "0.8.0"]
                  [binaryage/oops "0.7.0"]
                  [reagent "0.9.0-rc4"]
-                 [com.bhauman/figwheel-main "0.2.3"]
-                 [com.bhauman/rebel-readline-cljs "0.1.4"]
+                 ;;[com.bhauman/figwheel-main "0.2.3"]
+                 ;;[com.bhauman/rebel-readline-cljs "0.1.4"]
                  [environ "1.1.0"]]
 
   :plugins [[lein-cljsbuild "1.1.7":exclusions [[org.clojure/clojure]]]
@@ -27,8 +27,8 @@
 
   :profiles {:dev
              {:dependencies [[cider/piggieback "0.4.2"]
-                             ;; [com.bhauman/figwheel-main "0.2.3"]
-                             ;; [com.bhauman/rebel-readline-cljs "0.1.4"]
+                             [com.bhauman/figwheel-main "0.2.3"]
+                             [com.bhauman/rebel-readline-cljs "0.1.4"]
                              ]
               :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}
 
@@ -56,4 +56,7 @@
 
   :aliases {
             "fig-main" ["trampoline" "run" "-m" "figwheel.main" "-bb" "popup"  "-b" "background" "-r"]
+            "release"         ["with-profile" "+release" "do"
+                               ["clean"]
+                               ["cljsbuild" "once" "background" "popup"]]
            })

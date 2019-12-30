@@ -24,6 +24,7 @@
         "persistent": false
     },
     "permissions": [
+        "nativeMessaging",
         "notifications",
         "storage",
         "http://www.8080s.net/*"
