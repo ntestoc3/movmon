@@ -19,6 +19,7 @@
 ;;;; ================ 主要功能代码
 
 (defn noti-box
+  "显示通知框"
   [title message]
   (noti/create "movi-monitor" #js {:type "basic"
                                    :title title
@@ -63,19 +64,21 @@
   (set-badge-background-color #js {:color "#ff0000"}))
 
 (defn set-new-count!
+  "设置新计数"
   [n]
   (doto n
     db/set-new-count!
     set-badge-count!))
 
 (defn update-badge!
+  "根据当前计数更新badge"
   []
   (go
     (-> (<! (db/get-new-count))
         set-badge-count!)))
 
 (defn mark-monitor-new-state!
-  "更新監控new狀態"
+  "更新监控的更新状态和更新计数"
   [title new-state new-data-count]
   (go
     (db/set-monitor-new-state! (keyword title) new-state)
@@ -90,16 +93,18 @@
 (defn check-update-data!
   [name info body]
   (let [html-body (parse-html body)
-        dl-spans (sel html-body "span.dlname.nm")
+        dl-spans (sel html-body "span.dlname.nm") ;; 获取下载框dom元素
         last-data (first (:data info))
         datas (map parse-dlink dl-spans)]
     (if (= (:name (first datas))
            (:name last-data))
+      ;; 如果名字与已更新的最后一集名字相同，则没有更新
       (log "check update:" name "no new data!")
-      (let [update-datas (-> (partition-by #(= last-data %) datas)
-                             first)
+
+      ;; 否则保存新更新的数据，
+      (let [update-datas (take-while #(not= last-data %) datas)
             new-datas (if (:new info)
-                        ;; 之前的数据也是更新数据,则合并
+                        ;; 之前的数据也是更新数据(没有标记为未更新),则合并数据
                         (concat update-datas (:data info))
                         update-datas)
             update-count (count update-datas)]
@@ -119,6 +124,7 @@
          :error-handler error-handler})))
 
 (defn proc-monitors
+  "处理所有监控"
   []
   (log "BACKGROUND proc monitors starting...")
   (go
@@ -231,7 +237,7 @@
 
 (defn init! []
   (log "BACKGROUND: start ")
-  (js/setInterval proc-monitors (* 5 60 1000))
+  (js/setInterval proc-monitors (* 5 60 1000)) ; 每5分钟执行1次监控更新
   (proc-monitors)
   (update-badge!)
   (boot-chrome-event-loop!))

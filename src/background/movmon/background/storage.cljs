@@ -7,11 +7,6 @@
             [chromex.protocols.chrome-storage-area :as sa]
             [chromex.ext.storage :as storage]))
 
-(defn deep-merge [a & maps]
-  (if (map? a)
-    (apply merge-with deep-merge a maps)
-    (apply merge-with deep-merge maps)))
-
 (defn get-storage-key
   [k]
   (let [local-storage (storage/get-local)]
@@ -25,20 +20,24 @@
               (get (keyword k))))))))
 
 (defn get-all-monitors
+  "获取所有监控项信息"
   []
   (get-storage-key "monitors"))
 
 (defn get-new-count
+  "获取更新计数"
   []
   (get-storage-key "new-count"))
 
 (defn get-monitor-info
+  "获取监控项信息"
   [title]
   (go
     (-> (<! (get-all-monitors))
         title)))
 
 (defn set-new-count!
+  "设置更新统计计数"
   [n]
   (sa/set (storage/get-local) #js {:new-count n}))
 
@@ -50,15 +49,18 @@
       (sa/set (storage/get-local) (clj->js {:monitors new-monitors})))))
 
 (defn save-monitor-info!
+  "保存监控项"
   [title url data new]
   (update-monitors! #(merge % {title {:url url
                                      :new new
                                      :data data}})))
 
 (defn remove-monitor!
+  "删除一个监控项"
   [title]
   (update-monitors! #(dissoc % title)))
 
 (defn set-monitor-new-state!
+  "设置监控项的更新状态"
   [title new]
   (update-monitors! #(assoc-in % [title :new] new)))
